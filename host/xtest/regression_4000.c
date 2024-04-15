@@ -4707,6 +4707,11 @@ static void xtest_tee_test_4007_rsa(ADBG_Case_t *c)
 		{ 1, "RSA-3072", TEE_TYPE_RSA_KEYPAIR, 1, 3072, 3072 },
 		{ 1, "RSA-4096", TEE_TYPE_RSA_KEYPAIR, 1, 4096, 4096 },
 	};
+#ifdef CFG_RSA_PUB_EXPONENT_3
+	TEE_Attribute attrs[1] = { };
+	size_t n = 0;
+	const uint8_t pubexp_3[] = { 0x03 };
+#endif
 
 	if (!ADBG_EXPECT_TEEC_SUCCESS(c,
 		xtest_teec_open_session(&session, &crypt_user_ta_uuid, NULL,
@@ -4714,6 +4719,27 @@ static void xtest_tee_test_4007_rsa(ADBG_Case_t *c)
 		return;
 
 	keygen_noparams(c, &session, key_types, ARRAY_SIZE(key_types));
+
+#ifdef CFG_RSA_PUB_EXPONENT_3
+	xtest_add_attr(&n, attrs, TEE_ATTR_RSA_PUBLIC_EXPONENT, pubexp_3, 1);
+
+	for (n = 0; n < ARRAY_SIZE(key_types); n++) {
+		if (key_types[n].level > level)
+			continue;
+
+		Do_ADBG_BeginSubCase(c, "Generate %s key (public exponent 3)",
+				key_types[n].name);
+
+		if (!ADBG_EXPECT_TRUE(c,
+			generate_and_test_key(c, &session,
+				key_types[n].key_type, 1,
+				key_types[n].min_size, attrs, 1)))
+			break;
+
+		Do_ADBG_EndSubCase(c, "Generate %s key (public exponent 3)",
+				key_types[n].name);
+	}
+#endif
 
 	TEEC_CloseSession(&session);
 }
